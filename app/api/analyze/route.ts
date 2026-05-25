@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "GEMINI_API_KEY is not configured on the server." }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `You are an expert resume analyst and career coach. Analyze the following resume text and return a JSON response ONLY (no markdown, no explanation, just raw JSON).
 
