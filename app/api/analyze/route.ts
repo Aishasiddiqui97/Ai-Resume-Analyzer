@@ -1,46 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
-// Demo mode - returns sample data for testing (when quota exceeded)
-const DEMO_RESPONSE = {
-  overallScore: 78,
-  atsScore: 82,
-  jobReadinessScore: 75,
-  skills: {
-    technical: ["JavaScript", "React", "Node.js", "TypeScript", "MongoDB"],
-    soft: ["Leadership", "Communication", "Problem Solving", "Team Collaboration"],
-    missing: ["Python", "AWS", "Docker", "Kubernetes", "Machine Learning", "CI/CD", "GraphQL"],
-  },
-  sections: {
-    contact: 90,
-    summary: 70,
-    experience: 75,
-    education: 85,
-    skills: 80,
-    formatting: 88,
-  },
-  improvements: [
-    {
-      category: "Summary",
-      suggestion: "Add quantifiable achievements (e.g., '20% performance improvement')",
-      priority: "high",
-    },
-    { category: "Skills", suggestion: "Include cloud technologies like AWS or Azure", priority: "high" },
-    { category: "Experience", suggestion: "Use action verbs and metrics in bullet points", priority: "medium" },
-    { category: "Keywords", suggestion: "Add industry-specific keywords from job postings", priority: "medium" },
-  ],
-  keywords: ["Full Stack Developer", "Agile", "REST API", "Responsive Design", "Git", "Testing", "Debugging"],
-  strengths: [
-    "Clear work experience timeline",
-    "Good technical skills listed",
-    "Professional formatting",
-    "Educational background is relevant",
-  ],
-  summary:
-    "Your resume has a solid foundation with good technical skills and formatting. Focus on adding quantifiable achievements and industry keywords to boost ATS compatibility and stand out to recruiters.",
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,11 +8,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Resume text too short or empty." }, { status: 400 });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "GEMINI_API_KEY is not configured on the server." }, { status: 500 });
+    if (!process.env.OPENROUTER_API_KEY) {
+      return NextResponse.json({ error: "OPENROUTER_API_KEY is not configured on the server." }, { status: 500 });
     }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
     const prompt = `You are an expert resume analyst and career coach. Analyze the following resume text and return a JSON response ONLY (no markdown, no explanation, just raw JSON).
 
@@ -89,8 +45,25 @@ Return this exact JSON structure:
   "summary": "<2-3 sentence overall assessment>"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "mistralai/mistral-7b-instruct:free",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`OpenRouter error: ${err}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices[0].message.content;
 
     // Strip markdown code fences if present
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
