@@ -50,12 +50,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Resume text too short or empty." }, { status: 400 });
     }
 
-    // Check if demo mode should be used (for testing when quota exceeded)
-    const USE_DEMO = process.env.DEMO_MODE === "true";
-
-    if (USE_DEMO) {
-      console.log("📌 Demo Mode: Returning sample analysis data");
-      return NextResponse.json({ analysis: DEMO_RESPONSE });
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: "GEMINI_API_KEY is not configured on the server." }, { status: 500 });
     }
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
